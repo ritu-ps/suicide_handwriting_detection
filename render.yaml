@@ -1,0 +1,22 @@
+services:
+  # The Python Backend (FastAPI)
+  - type: web
+    name: suicide-depression-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+
+  # The React Frontend (Vite)
+  - type: static_site
+    name: suicide-depression-frontend
+    buildCommand: "cd frontend && npm install && npm run build"
+    publishPath: "./frontend/dist"
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: suicide-depression-backend
+          envVarKey: RENDER_EXTERNAL_URL
