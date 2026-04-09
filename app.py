@@ -51,42 +51,51 @@ class TypingSuicideModel(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+import asyncio
+
 # Load Models Safely
 text_model = None
 tokenizer = None
 typing_model = None
 scaler = None
 
-@app.on_event("startup")
-async def load_models():
+def load_models_sync():
     global text_model, tokenizer, typing_model, scaler
     try:
-        print("Loading Text Model...")
+        print("Loading Text Model in background...")
         text_data = torch.load('text_suicide_model (1).pth', map_location='cpu')
         text_config = text_data.get('config', {'model_name': 'distilbert-base-uncased', 'dropout': 0.3, 'num_classes': 2})
         text_model = TextSuicideModel(text_config)
         text_model.load_state_dict(text_data['model_state'], strict=False)
         text_model.eval()
         tokenizer = AutoTokenizer.from_pretrained(text_config['model_name'])
+        print("Text Model Online!")
     except Exception as e:
         print(f"Error loading Text model: {e}")
 
     try:
-        print("Loading Typing Model...")
+        print("Loading Typing Model in background...")
         typing_data = torch.load('typing_suicide_model (1).pth', map_location='cpu')
         typing_config = typing_data.get('config', {'input_dim': 7, 'hidden': 128, 'dropout': 0.3, 'num_classes': 2})
         typing_model = TypingSuicideModel(typing_config)
         typing_model.load_state_dict(typing_data['model_state'], strict=False)
         typing_model.eval()
+        print("Typing Model Online!")
     except Exception as e:
         print(f"Error loading Typing model: {e}")
 
     try:
-        print("Loading Scaler...")
+        print("Loading Scaler in background...")
         with open('keystroke_scaler.pkl', 'rb') as f:
             scaler = pickle.load(f)
+        print("Scaler Online!")
     except Exception as e:
         print(f"Scaler not found or error loading: {e}. Using unscaled data.")
+
+@app.on_event("startup")
+async def load_models():
+    # Spawning as a background thread prevents PyTorch from freezing Uvicorn's port binding!
+    asyncio.create_task(asyncio.to_thread(load_models_sync))
 
 class TypingData(BaseModel):
     wpm: float
