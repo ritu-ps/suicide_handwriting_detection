@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, AutoConfig
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
 import numpy as np
+import gc
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -13,7 +14,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 class TextSuicideModel(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.bert = AutoModel.from_pretrained(config['model_name'])
+        hf_config = AutoConfig.from_pretrained(config['model_name'])
+        self.bert = AutoModel.from_config(hf_config)
         self.head = nn.Sequential(
             nn.Linear(self.bert.config.hidden_size, 256),
             nn.LayerNorm(256),
@@ -67,6 +69,8 @@ def load_models_sync():
         text_config = text_data.get('config', {'model_name': 'distilbert-base-uncased', 'dropout': 0.3, 'num_classes': 2})
         text_model = TextSuicideModel(text_config)
         text_model.load_state_dict(text_data['model_state'], strict=False)
+        del text_data
+        gc.collect()
         text_model.eval()
         tokenizer = AutoTokenizer.from_pretrained(text_config['model_name'])
         print("Text Model Online!")
