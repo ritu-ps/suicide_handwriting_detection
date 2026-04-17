@@ -1,0 +1,1 @@
+Developed an AI-based system that analyzes handwriting and typing patterns to identify potential emotional distress indicators using machine learning and NLP techniques. Designed as an early warning tool for behavioral analysis.
